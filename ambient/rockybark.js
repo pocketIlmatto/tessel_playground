@@ -1,11 +1,12 @@
 var tessel = require('tessel');
 var ambientlib = require('ambient-attx4');
 
-var ambient = ambientlib.use(tessel.port['A']);
+var ambient = ambientlib.use(tessel.port['B']);
 
 ambient.on('ready', function () {
 	var lastStatus = "";
 	var currentStatus = "";
+	var countTweets = 0;
 	setInterval( function () {		
 			ambient.getSoundLevel( function(err, sdata) {
 				if (err) throw err;
@@ -13,16 +14,21 @@ ambient.on('ready', function () {
 			
 		})}, 500);	
 
-	ambient.setSoundTrigger(0.2);
+	ambient.setSoundTrigger(0.1);
 
 	ambient.on('sound-trigger', function(data) {
 		currentStatus = buildStatus(data, lastStatus);
-		tweet(currentStatus);
+		tweet(currentStatus+" #loudBarks "+data.toFixed(3));
+		countTweets ++;
 		console.log(currentStatus);
 		lastStatus = currentStatus;
 		ambient.clearSoundTrigger();
+		if (countTweets >= 10) {
+			exit();
+		}
+
 		setTimeout(function () {
-			ambient.setSoundTrigger(0.2);
+			ambient.setSoundTrigger(0.1);
 
 		}, 1000);
 
@@ -32,6 +38,7 @@ ambient.on('ready', function () {
 ambient.on('error', function (err) {
 	console.log(err);
 });
+
 //TODO rate limit (>15 seconds between tweets)
 
 function buildStatus (intensity, lastStatus) {
@@ -39,36 +46,21 @@ function buildStatus (intensity, lastStatus) {
 	if (lastStatus === "" || 
 			lastStatus === "Time for a dog nap.." ) {
 		status = "Rocky wakes up from his nap...";
+		return status;
 	}
-	else if (lastStatus === "Rocky wakes up from his nap..." ||
-				(Math.floor(intensity*10) > 2 && lastStatus == "He lets out a couple warning 'Boofs'... something could be amiss")) {
 	
-		switch(Math.floor(intensity*10)) {
-		    case 2:
-		        status = "He lets out a couple warning 'Boofs'... something could be amiss";
-		        break;
-		    case 3:
-		        status = "All hell is breaking loose.  Hurry up human, someone is doing something unauthorized by dog.";
-		        
-		        break;
-		    default:
-		         
-		        status = "Nothing to see here...";
-		        
-		}
+	if (intensity > 0.15 && intensity < 0.25){
+	 	status = "He lets out a couple warning 'Boofs'... something could be amiss";
 	}
-	else if (Math.floor(intensity*10) === 2 
-				&& lastStatus === "He lets out a couple warning 'Boofs'... something could be amiss") {
-	
-		status = "All hell is breaking loose.  Hurry up human, someone is doing something unauthorized by dog.";
-		        
+	else if (intensity >= 0.25){
+	 	status = "All hell is breaking loose.  Hurry up human, someone is doing something unauthorized by dog.";
 	}
 	else {
 		status = "Nothing to see here...";
 	}
-	if (status === lastStatus){
+
+	if (lastStatus === "Nothing to see here..."){
 		status = "Time for a dog nap..";
-		exit();
 	}
 	return status;
 }
@@ -80,7 +72,7 @@ function tweet (status) {
 	var https = require('https');
 	var crypto = require('crypto');
 
-	var twitterHandle = '@pkinnairdTessel';
+	var twitterHandle = '@RockyBuddyBoy';
 
 	// The status to tweet
 	var status = status;
@@ -90,10 +82,10 @@ function tweet (status) {
 	var curtime = parseInt(process.env.DEPLOY_TIMESTAMP || Date.now());
 
 
-	var oauth_consumer_key = "7NrHyEbG3y2mZ4cfGxaxQLvu5";
-	var oauth_consumer_secret = "QfGh4NSFVqMmxkZGWVrSf6CuS4a1Eww1f6Z7RLy49Ah5ohLyZe";
-	var oauth_access_token = "2820335017-USL00HpFt92d8KZe4nwoX87mFPxLgmQQCB3XRqM";
-	var oauth_access_secret = "uDWy9Lpnbd2kgE7NfkrpXorJ0rgezJeN5y3GluJpVggJb";
+	var oauth_consumer_key = "nU2J72kmywnzTUaIQKh6UqcsA";
+	var oauth_consumer_secret = "3RdbF1lsPpBxvgvFzpRiHtRVVnX5uMmfDoajZAtc6eIXqA0nit";
+	var oauth_access_token = "2830596043-KrwuywklV7AkDgotUwai8qR4PyvzWcfk2hNcRcN";
+	var oauth_access_secret = "uAaqafbYckV6otIw1B9byQ55NsSzgNkmfv0qGnbJ5nXWF";
 
 	var oauth_data = {
 	  oauth_consumer_key: oauth_consumer_key,
